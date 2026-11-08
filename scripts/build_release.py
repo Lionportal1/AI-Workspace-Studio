@@ -17,7 +17,7 @@ from ai_workspace_portable import VERSION
 CORE = ["ai_workspace_portable.py","lib/generate_profiles.py","assets/profile-index.json"]
 
 def source_paths():
-    names = set(CORE + ["README.md","AI_WORKSPACE_GUIDE.md","WINDOWS_QUICKSTART.md",
+    names = set(CORE + ["LICENSE","README.md","AI_WORKSPACE_GUIDE.md","WINDOWS_QUICKSTART.md",
         "ANTIGRAVITY_50_SKILLS_CATALOG.md","CONTRIBUTING.md","SECURITY.md",
         "CHANGELOG.md","ROADMAP.md",".gitignore","ai-workspace-setup.sh","setup-windows.ps1",
         "start-windows.cmd","scripts/audit_sources.py","scripts/build_release.py",
@@ -55,12 +55,14 @@ def archive_tar(paths):
     return memory.getvalue()
 
 def standalones():
-    files=CORE+[p for p in source_paths() if p.startswith("assets/scaffold/")]
+    files=["LICENSE"]+CORE+[p for p in source_paths() if p.startswith("assets/scaffold/")]
     data=archive_zip(files)
     payload=base64.b64encode(data).decode("ascii")
     payload="\n".join(payload[i:i+112] for i in range(0,len(payload),112))
     digest=hashlib.sha256(data).hexdigest()
-    windows=r"""# Self-contained AI Workspace Studio PowerShell installer (Python 3.8+ required).
+    windows=r"""# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Lionportal1
+# Self-contained AI Workspace Studio PowerShell installer (Python 3.8+ required).
 $ErrorActionPreference='Stop'
 $Forward=@($args)
 $Payload=@'
@@ -95,6 +97,8 @@ try {
 }
 """.replace("__PAYLOAD__",payload).replace("__HASH__",digest)
     unix=r"""#!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Lionportal1
 set -Eeuo pipefail
 command -v python3 >/dev/null || { echo 'Python 3.8+ required' >&2; exit 2; }
 TMP=$(mktemp -d)
@@ -131,6 +135,7 @@ def build(out):
         hashlib.sha256(data).hexdigest()+"  "+name for name,data in sorted(assets.items()))+"\n")
     with zipfile.ZipFile(out/(tag+".zip")) as z:
         assert z.testzip() is None
+        assert z.read("LICENSE").startswith(b"MIT License\n")
         count=sum(n.startswith("assets/scaffold/.agents/skills/") and n.endswith("/SKILL.md") for n in z.namelist())
         assert count==50, "Unexpected skill count: "+str(count)
     print("Built 5 assets for v"+VERSION)
