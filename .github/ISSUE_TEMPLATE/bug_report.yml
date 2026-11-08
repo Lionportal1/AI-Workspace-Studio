@@ -1,0 +1,19 @@
+name: Bug report
+description: Report an installer problem
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+    validations:
+      required: true
+  - type: input
+    id: host
+    attributes:
+      label: OS, Python version and shell
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce

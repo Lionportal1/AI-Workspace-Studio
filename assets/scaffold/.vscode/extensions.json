@@ -1,0 +1,18 @@
+{
+  "recommendations": [
+    "EditorConfig.EditorConfig",
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+    "charliermarsh.ruff",
+    "ms-dotnettools.csharp",
+    "rust-lang.rust-analyzer",
+    "ms-vscode.cpptools",
+    "redhat.vscode-yaml",
+    "tamasfe.even-better-toml",
+    "bradlc.vscode-tailwindcss",
+    "streetsidesoftware.code-spell-checker",
+    "github.vscode-github-actions"
+  ]
+}
