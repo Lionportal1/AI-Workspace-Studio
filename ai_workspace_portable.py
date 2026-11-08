@@ -5,6 +5,7 @@ Uses only Python stdlib for workspace generation. Optional Git, Node, uv, and ag
 are invoked only with explicit flags and never through a shell.
 """
 import argparse
+import ast
 import json
 import os
 from pathlib import Path
@@ -340,6 +341,8 @@ def templates_healthy():
     if not ADAPTER.is_file() or ADAPTER.is_symlink():
         return False
     try:
+        # Syntax-check the adapter without importing or executing it.
+        ast.parse(ADAPTER.read_text(encoding="utf-8"), filename=str(ADAPTER))
         profiles = load_object(INDEX)
         for preset, expected in [("minimal", 20), ("balanced", 35), ("max", 50)]:
             names = profiles.get(preset)
@@ -353,7 +356,7 @@ def templates_healthy():
             if any(not (ASSETS / ".agents" / "skills" / name / "SKILL.md").is_file()
                    for name in names):
                 return False
-    except (OSError, RuntimeError, ValueError):
+    except (OSError, RuntimeError, ValueError, SyntaxError, UnicodeError):
         return False
     return True
 
