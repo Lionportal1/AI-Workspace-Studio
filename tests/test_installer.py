@@ -112,6 +112,13 @@ class InstallerTests(unittest.TestCase):
         self.assertIn("Template    MISSING", result.stdout)
         adapter.with_suffix(".hidden").rename(adapter)
 
+        original_adapter = adapter.read_text(encoding="utf-8")
+        adapter.write_text("def broken(:\n", encoding="utf-8")
+        result = diagnose()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Template    MISSING", result.stdout)
+        adapter.write_text(original_adapter, encoding="utf-8")
+
         result = diagnose()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("Template    OK", result.stdout)
