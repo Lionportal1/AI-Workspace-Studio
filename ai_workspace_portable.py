@@ -582,7 +582,7 @@ def run():
         (skills, copied, total, added))
     clone_and_import(workspace, config.community, config.strict)
     subprocess.run([sys.executable, str(ADAPTER), str(workspace), config.agent, config.preset,
-                    config.mcp, "1" if config.force else "0", config.stack], check=True)
+                    config.mcp, "1" if config.force else "0", config.stack, VERSION], check=True)
     if config.native_plugins != "none":
         install_plugins(config.native_plugins, config.strict)
     git_scaffold(workspace, config.no_git, config.commit)
