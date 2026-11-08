@@ -1,7 +1,7 @@
 """Offline regression tests for Windows/macOS/Linux installer."""
 import json
 from pathlib import Path
-import subprocess,sys,tempfile,unittest
+import shutil,subprocess,sys,tempfile,unittest
 ROOT=Path(__file__).resolve().parents[1]
 def invoke(*args,input_text=None):
     return subprocess.run([sys.executable,str(ROOT/"ai_workspace_portable.py"),*map(str,args)],input=input_text,capture_output=True,text=True,timeout=60)
@@ -61,6 +61,67 @@ class InstallerTests(unittest.TestCase):
         self.assertIn("Offline: OFF", r.stdout)
         self.assertIn("Note: initial commit applies only", r.stdout)
         self.assertFalse(t.exists())
+
+    def test_doctor_success_and_invalid_bundle_exit_codes(self):
+        # Test the actual CLI against a small isolated copy of its core assets.
+        # No edits are made to the development tree or a user's workspace.
+        t = self.path / "doctor-bundle"
+        t.mkdir()
+        entry = t / "ai_workspace_portable.py"
+        shutil.copyfile(ROOT / "ai_workspace_portable.py", entry)
+        assets = t / "assets"
+        shutil.copytree(ROOT / "assets/scaffold/.agents/skills",
+                        assets / "scaffold/.agents/skills")
+        index = assets / "profile-index.json"
+        shutil.copyfile(ROOT / "assets/profile-index.json", index)
+        (t / "lib").mkdir()
+        adapter = t / "lib/generate_profiles.py"
+        shutil.copyfile(ROOT / "lib/generate_profiles.py", adapter)
+
+        def diagnose():
+            return subprocess.run([sys.executable, str(entry), "--doctor"],
+                                  capture_output=True, text=True, timeout=60)
+
+        result = diagnose()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("Template    OK", result.stdout)
+
+        # Every failure is recoverable; restored fixtures must still pass.
+        original_index = index.read_text(encoding="utf-8")
+        index.unlink()
+        result = diagnose()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Template    MISSING", result.stdout)
+
+        index.write_text("{broken json", encoding="utf-8")
+        result = diagnose()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Template    MISSING", result.stdout)
+        index.write_text(original_index, encoding="utf-8")
+
+        skill = assets / "scaffold/.agents/skills/api-contract-review/SKILL.md"
+        skill.rename(skill.with_suffix(".hidden"))
+        result = diagnose()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Template    MISSING", result.stdout)
+        skill.with_suffix(".hidden").rename(skill)
+
+        adapter.rename(adapter.with_suffix(".hidden"))
+        result = diagnose()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Template    MISSING", result.stdout)
+        adapter.with_suffix(".hidden").rename(adapter)
+
+        original_adapter = adapter.read_text(encoding="utf-8")
+        adapter.write_text("def broken(:\n", encoding="utf-8")
+        result = diagnose()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Template    MISSING", result.stdout)
+        adapter.write_text(original_adapter, encoding="utf-8")
+
+        result = diagnose()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("Template    OK", result.stdout)
 
     def test_windows_npx(self):
         from pathlib import PureWindowsPath

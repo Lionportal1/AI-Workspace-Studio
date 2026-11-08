@@ -5,6 +5,7 @@ Uses only Python stdlib for workspace generation. Optional Git, Node, uv, and ag
 are invoked only with explicit flags and never through a shell.
 """
 import argparse
+import ast
 import json
 import os
 from pathlib import Path
@@ -333,14 +334,44 @@ def parse_targets(raw):
     return ",".join(dict.fromkeys(names))
 
 
+def templates_healthy():
+    """Check the core bundle and every indexed built-in skill without changing files."""
+    if not ASSETS.is_dir() or ASSETS.is_symlink() or not INDEX.is_file():
+        return False
+    if not ADAPTER.is_file() or ADAPTER.is_symlink():
+        return False
+    try:
+        # Syntax-check the adapter without importing or executing it.
+        ast.parse(ADAPTER.read_text(encoding="utf-8"), filename=str(ADAPTER))
+        profiles = load_object(INDEX)
+        for preset, expected in [("minimal", 20), ("balanced", 35), ("max", 50)]:
+            names = profiles.get(preset)
+            if not isinstance(names, list) or len(names) != expected:
+                return False
+            if any(not isinstance(name, str) or not re.fullmatch(r"[A-Za-z0-9_-]+", name)
+                   for name in names):
+                return False
+            if len(set(names)) != expected:
+                return False
+            if any(not (ASSETS / ".agents" / "skills" / name / "SKILL.md").is_file()
+                   for name in names):
+                return False
+    except (OSError, RuntimeError, ValueError, SyntaxError, UnicodeError):
+        return False
+    return True
+
+
 def doctor():
     log("AI Workspace Studio %s - Windows/macOS/Linux diagnostics" % VERSION)
     print("  Python      %s (%s)" % (sys.version.split()[0], sys.executable))
     print("  OS          %s (%s)" % (sys.platform, os.name))
     for cmd in ["git", "node", "npx", "uvx", "agy", "opencode", "claude", "codex", "gemini", "pwsh"]:
         print("  %-11s %s" % (cmd, shutil.which(cmd) or "not detected (optional)"))
-    print("  Template    %s" % ("OK" if ASSETS.is_dir() and INDEX.is_file() else "MISSING"))
+    healthy = templates_healthy()
+    print("  Template    %s" % ("OK" if healthy else "MISSING"))
     print("  Note: configured MCP servers still require separate startup/auth verification")
+    if not healthy:
+        fail("Required toolkit templates are missing or invalid")
 
 
 def preview(config):

@@ -42,6 +42,8 @@ For dependency diagnostics:
 .\setup-windows.ps1 --doctor
 ```
 
+`--doctor` exits with code `0` when required toolkit templates and the bundled skill index are valid. It exits nonzero (`1`) when a required core file is missing or invalid; a `Template    MISSING` report is an error, not a successful health check. Missing optional tools (such as `uvx`, Codex or Gemini) are informational and do not by themselves fail diagnostics. MCP runtime and authentication status require separate verification.
+
 The same flags work on macOS/Linux through `bash ai-workspace-setup.sh` and on all platforms through `python ai_workspace_portable.py`.
 
 ## If the PowerShell launcher prints nothing
