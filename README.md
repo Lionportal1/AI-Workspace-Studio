@@ -85,9 +85,11 @@ tests/                     Automated regression tests
 docs/                      Architecture, compatibility, and maintenance docs
 ```
 
-## License status
+## License
 
-An open-source license has **not yet been selected by the repository owner**. Public visibility alone does not grant reuse or redistribution rights. Until a LICENSE file is added, do not assume this project is licensed for third-party reuse. Imported community skills remain under their respective upstream licenses; community sources are **not vendored** in this repository.
+AI Workspace Studio is distributed under the [MIT License](LICENSE). Copyright (c) 2026 Lionportal1.
+
+The MIT terms apply to this repository's original source, project-authored templates and documentation. Optional community skills, plugins and MCP servers retain their **own upstream licenses and attribution requirements**; their separate licensing is not changed by this repository's MIT license. Third-party community repositories are not vendored here.
 
 ## Acknowledgments
 

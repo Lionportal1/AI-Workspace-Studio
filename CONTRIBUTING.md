@@ -12,3 +12,9 @@ Use GitFlow with reviewed pull requests. `main` is release-only; `develop` integ
 No force pushes or automatic direct writes to protected branches. Install GitHub rulesets and approval gates as described in [GitFlow setup](docs/maintainers/GITFLOW.md).
 
 Preserve existing user files by default and do not commit credentials, API keys, external skill clones, or generated workspaces.
+
+## License of contributions
+
+AI Workspace Studio is licensed under the [MIT License](LICENSE) (SPDX identifier: `MIT`). By contributing original work to this repository, you agree that it may be distributed under the project's MIT license. Only submit material you have the right to contribute, and keep required notices and attributions for third-party materials.
+
+Optional community skills, plugins and MCP packages are independently licensed; do not copy their contents into this repository without confirming compatible permissions and preserving upstream attribution.
