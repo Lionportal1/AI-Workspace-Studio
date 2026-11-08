@@ -19,6 +19,38 @@ class InstallerTests(unittest.TestCase):
             self.assertEqual(len(json.loads((target/".agents/mcp_config.json").read_text())["mcpServers"]),mcp)
             self.assertTrue((target/"opencode.json").exists())
             self.assertTrue((target/".github/skills").is_dir())
+    def test_workspace_profile_version_comes_from_installer(self):
+        target = self.path / "versioned-workspace"
+        args = (target, "--agent", "antigravity", "--preset", "minimal",
+                "--mcp", "none", "--offline", "--no-git")
+        result = invoke(*args)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+        version = invoke("--version")
+        self.assertEqual(version.returncode, 0, version.stderr)
+        profile = target / "docs/integrations/WORKSPACE_PROFILE.json"
+        self.assertEqual(json.loads(profile.read_text(encoding="utf-8"))["version"],
+                         version.stdout.strip())
+
+        # Preserve an existing profile unless overwrite is explicitly requested.
+        preserved = profile.read_text(encoding="utf-8")
+        result = invoke(*args)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(profile.read_text(encoding="utf-8"), preserved)
+
+        # An independent adapter call with a different future version must not
+        # retain a hard-coded version; the engine supplies this argument.
+        future_version = "8.2.0-rc.1"
+        adapter = ROOT / "lib/generate_profiles.py"
+        result = subprocess.run(
+            [sys.executable, str(adapter), str(target), "antigravity",
+             "minimal", "none", "1", "general", future_version],
+            capture_output=True, text=True, timeout=60,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(json.loads(profile.read_text(encoding="utf-8"))["version"],
+                         future_version)
+
     def test_dry_run(self):
         t=self.path/"dry"
         self.assertEqual(invoke(t,"--dry-run","--offline").returncode,0)
