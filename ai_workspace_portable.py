@@ -375,6 +375,10 @@ def select_agents(current):
         return current
 
 
+def on_off(value):
+    return "ON" if value else "OFF"
+
+
 def menu(config):
     while True:
         print("\n" + "=" * 62)
@@ -382,7 +386,12 @@ def menu(config):
         print("=" * 62)
         print(" Workspace: %s | Agents: %s" % (config.project, config.agent))
         print(" Preset: %s | MCP: %s | Community: %s" % (config.preset, config.mcp, config.community))
-        print(" OS: %s | Offline: %s" % ("Windows" if os.name == "nt" else "macOS / Linux", config.offline))
+        print(" OS: %s | Git init: %s | Commit: %s" % (
+            "Windows" if os.name == "nt" else "macOS / Linux",
+            on_off(not config.no_git), on_off(config.commit)))
+        print(" Offline: %s | Dry run: %s | Overwrite: %s | Strict: %s" % (
+            on_off(config.offline), on_off(config.dry_run),
+            on_off(config.force), on_off(config.strict)))
         print(" 1  Workspace directory       2  Agent profiles")
         print(" 3  Skill library (20/35/50)  4  Community skill sources")
         print(" 5  MCP integration preset    6  Global Antigravity plugins")
@@ -409,13 +418,26 @@ def menu(config):
                 config.native_plugins = {"1": "none", "2": "core", "3": "all"}.get(
                     input("1 None / 2 Superpowers / 3 Additional plugins: ").strip(), config.native_plugins)
             elif choice == "7":
-                print("1 Toggle Git | 2 Toggle commit | 3 Toggle offline | 4 Toggle dry-run")
-                print("5 Toggle overwrite | 6 Toggle strict | 7 Technical stack")
-                opt = input("Option: ").strip()
-                attr = {"1": "no_git", "2": "commit", "3": "offline", "4": "dry_run",
-                        "5": "force", "6": "strict"}.get(opt)
-                if attr:
+                print(" 1 Git initialization: %-3s    2 Initial commit: %-3s" % (
+                    on_off(not config.no_git), on_off(config.commit)))
+                print(" 3 Offline mode:       %-3s    4 Dry run:        %-3s" % (
+                    on_off(config.offline), on_off(config.dry_run)))
+                print(" 5 Overwrite files:    %-3s    6 Strict mode:    %-3s" % (
+                    on_off(config.force), on_off(config.strict)))
+                print(" 7 Technical stack: %s" % config.stack)
+                print(" Note: initial commit applies only when a new Git repository is initialized.")
+                opt = input("Option (1-7): ").strip()
+                switches = {"1": ("no_git", "Git initialization"),
+                            "2": ("commit", "Initial commit"),
+                            "3": ("offline", "Offline mode"),
+                            "4": ("dry_run", "Dry run"),
+                            "5": ("force", "Overwrite files"),
+                            "6": ("strict", "Strict mode")}
+                if opt in switches:
+                    attr, label = switches[opt]
                     setattr(config, attr, not getattr(config, attr))
+                    enabled = not config.no_git if attr == "no_git" else getattr(config, attr)
+                    print(" %s is now %s" % (label, on_off(enabled)))
                 elif opt == "7":
                     val = input("Stack (%s): " % ", ".join(STACKS)).strip().lower()
                     if val in STACKS:

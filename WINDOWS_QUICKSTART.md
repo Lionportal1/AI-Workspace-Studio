@@ -44,6 +44,25 @@ For dependency diagnostics:
 
 The same flags work on macOS/Linux through `bash ai-workspace-setup.sh` and on all platforms through `python ai_workspace_portable.py`.
 
+## If the PowerShell launcher prints nothing
+
+If `./setup-windows.ps1 --doctor` exits without output, older v3.1.0 release candidates used a separate Python `-c` interpreter probe that could fail silently in some Windows shells. The launcher has been updated to call the selected Python executable directly, allowing the Python engine to report its own version errors.
+
+From the project directory, update the release branch and retry:
+
+```powershell
+git pull --ff-only origin release/3.1.0
+.\\setup-windows.ps1 --doctor
+```
+
+As a direct diagnostic that bypasses the PowerShell launcher:
+
+```powershell
+py -3 .\\ai_workspace_portable.py --doctor
+```
+
+Expected output includes `Template    OK`. The CI suite now checks the actual `--doctor` and `--version` output for the PowerShell launcher and standalone package.
+
 ## Windows-specific behavior
 
 - Windows-style paths and paths containing spaces are passed directly to Python as arguments, without shell interpolation.

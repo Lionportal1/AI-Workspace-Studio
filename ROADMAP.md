@@ -2,7 +2,7 @@
 
 ## Before the first stable release
 
-- [ ] Select and approve an open-source license, then add LICENSE.
+- [x] Select the MIT License and add LICENSE; update project documentation.
 - [ ] Merge bootstrap PR and verify the Windows/macOS/Linux CI matrix.
 - [ ] Configure GitHub rulesets for main/develop and the protected production-release environment.
 - [ ] Validate standalone installers on actual target machines.

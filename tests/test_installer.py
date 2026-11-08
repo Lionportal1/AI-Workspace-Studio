@@ -43,6 +43,25 @@ class InstallerTests(unittest.TestCase):
         r=invoke(t,"--menu","--no-git","--offline",input_text="2\n2,4\n3\n3\n9\ny\n")
         self.assertEqual(r.returncode,0,r.stderr)
         self.assertTrue((t/"opencode.json").exists())
+    def test_advanced_menu_shows_toggle_state_and_effects(self):
+        t = self.path / "advanced-menu"
+        r = invoke(
+            t, "--menu", "--no-git", "--offline",
+            input_text="7\n1\n7\n1\n7\n3\n7\n2\n0\n",
+        )
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("1 Git initialization: OFF", r.stdout)
+        self.assertIn("Git initialization is now ON", r.stdout)
+        self.assertIn("Git initialization is now OFF", r.stdout)
+        self.assertIn("Offline mode is now OFF", r.stdout)
+        self.assertIn("Initial commit is now ON", r.stdout)
+        self.assertIn("Git init: ON", r.stdout)
+        self.assertIn("Git init: OFF", r.stdout)
+        self.assertIn("Offline: ON", r.stdout)
+        self.assertIn("Offline: OFF", r.stdout)
+        self.assertIn("Note: initial commit applies only", r.stdout)
+        self.assertFalse(t.exists())
+
     def test_windows_npx(self):
         from pathlib import PureWindowsPath
         sys.path.insert(0,str(ROOT))

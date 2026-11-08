@@ -17,9 +17,9 @@ from ai_workspace_portable import VERSION
 CORE = ["ai_workspace_portable.py","lib/generate_profiles.py","assets/profile-index.json"]
 
 def source_paths():
-    names = set(CORE + ["README.md","AI_WORKSPACE_GUIDE.md","WINDOWS_QUICKSTART.md",
+    names = set(CORE + ["LICENSE","README.md","AI_WORKSPACE_GUIDE.md","WINDOWS_QUICKSTART.md",
         "ANTIGRAVITY_50_SKILLS_CATALOG.md","CONTRIBUTING.md","SECURITY.md",
-        "CHANGELOG.md","ROADMAP.md",".gitignore","ai-workspace-setup.sh","setup-windows.ps1",
+        "CHANGELOG.md","ROADMAP.md",".gitattributes",".gitignore","ai-workspace-setup.sh","setup-windows.ps1",
         "start-windows.cmd","scripts/audit_sources.py","scripts/build_release.py",
         "tests/test_installer.py","tests/test_cli.sh"])
     for dirname in ("assets/scaffold","docs",".github"):
@@ -55,12 +55,14 @@ def archive_tar(paths):
     return memory.getvalue()
 
 def standalones():
-    files=CORE+[p for p in source_paths() if p.startswith("assets/scaffold/")]
+    files=["LICENSE"]+CORE+[p for p in source_paths() if p.startswith("assets/scaffold/")]
     data=archive_zip(files)
     payload=base64.b64encode(data).decode("ascii")
     payload="\n".join(payload[i:i+112] for i in range(0,len(payload),112))
     digest=hashlib.sha256(data).hexdigest()
-    windows=r"""# Self-contained AI Workspace Studio PowerShell installer (Python 3.8+ required).
+    windows=r"""# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Lionportal1
+# Self-contained AI Workspace Studio PowerShell installer (Python 3.8+ required).
 $ErrorActionPreference='Stop'
 $Forward=@($args)
 $Payload=@'
@@ -76,25 +78,33 @@ try {
     throw 'Embedded archive checksum mismatch'
   }
   Expand-Archive -LiteralPath $Zip -DestinationPath (Join-Path $Temp 'source') -Force
+  $Python=$null
+  $PythonName=$null
   foreach ($name in @('py','python','python3')) {
     $cmd=Get-Command -Name $name -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
-    if (-not $cmd) { continue }
-    $prefix=if ($name -eq 'py') {@('-3')} else {@()}
-    $good=& $cmd.Source @prefix -c 'import sys;print(int(sys.version_info >= (3,8)))' 2>$null
-    if ($LASTEXITCODE -eq 0 -and $good -eq '1') {
-      & $cmd.Source @prefix (Join-Path $Temp 'source/ai_workspace_portable.py') @Forward
-      exit $LASTEXITCODE
+    if ($cmd) {
+      $Python=$cmd.Source
+      $PythonName=$name
+      break
     }
   }
-  throw 'Python 3.8+ is required.'
+  if (-not $Python) { throw 'Python 3.8+ is required.' }
+  $EntryPoint=Join-Path (Join-Path $Temp 'source') 'ai_workspace_portable.py'
+  if ($PythonName -eq 'py') {
+    & $Python -3 $EntryPoint @Forward
+  } else {
+    & $Python $EntryPoint @Forward
+  }
+  if ($LASTEXITCODE -ne 0) { throw "AI Workspace Studio exited with code $LASTEXITCODE." }
 } catch {
-  Write-Error $_.Exception.Message
-  exit 2
+  throw
 } finally {
   Remove-Item -LiteralPath $Temp -Recurse -Force -ErrorAction SilentlyContinue
 }
 """.replace("__PAYLOAD__",payload).replace("__HASH__",digest)
     unix=r"""#!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Lionportal1
 set -Eeuo pipefail
 command -v python3 >/dev/null || { echo 'Python 3.8+ required' >&2; exit 2; }
 TMP=$(mktemp -d)
@@ -131,6 +141,7 @@ def build(out):
         hashlib.sha256(data).hexdigest()+"  "+name for name,data in sorted(assets.items()))+"\n")
     with zipfile.ZipFile(out/(tag+".zip")) as z:
         assert z.testzip() is None
+        assert z.read("LICENSE").replace(b"\r\n", b"\n").startswith(b"MIT License\n")
         count=sum(n.startswith("assets/scaffold/.agents/skills/") and n.endswith("/SKILL.md") for n in z.namelist())
         assert count==50, "Unexpected skill count: "+str(count)
     print("Built 5 assets for v"+VERSION)
