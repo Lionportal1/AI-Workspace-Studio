@@ -139,15 +139,15 @@ def mirror_skills(root, dest):
 
 
 def main():
-    if len(sys.argv) != 7:
-        fail("Usage: generate_profiles.py ROOT TARGETS PRESET MCP FORCE STACK")
+    if len(sys.argv) != 8:
+        fail("Usage: generate_profiles.py ROOT TARGETS PRESET MCP FORCE STACK VERSION")
     root = Path(sys.argv[1]).resolve()
     requested = sys.argv[2].split(",")
     targets = (
         ["antigravity", "opencode", "claude", "codex", "cursor", "gemini", "copilot", "devin"]
         if "universal" in requested else list(dict.fromkeys(requested))
     )
-    preset, mcp, force, stack = sys.argv[3], sys.argv[4], sys.argv[5] == "1", sys.argv[6]
+    preset, mcp, force, stack, version = sys.argv[3], sys.argv[4], sys.argv[5] == "1", sys.argv[6], sys.argv[7]
     canonical = read_json(root / ".agents/mcp_config.json")
     servers = active_servers(canonical.get("mcpServers", {}))
 
@@ -218,7 +218,7 @@ folder or turn on external tools globally. Import approved servers manually.
 
     # Keep a portable skill catalog, always-on rules and docs in .agents/.
     report = {
-        "version": "3.0.0", "agents": targets, "skill_preset": preset,
+        "version": version, "agents": targets, "skill_preset": preset,
         "mcp_preset": mcp, "technical_stack": stack, "active_mcp_servers": sorted(servers),
         "built_in_and_imported_skills": len(list((root / ".agents/skills").glob("*/SKILL.md"))),
     }
