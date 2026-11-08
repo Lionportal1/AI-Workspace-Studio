@@ -25,7 +25,7 @@ class ReleaseLicenseTests(unittest.TestCase):
                 self.assertIn(b"SPDX-License-Identifier: MIT", windows if installer.startswith("Windows") else unix)
                 with zipfile.ZipFile(io.BytesIO(base64.b64decode("".join(encoded.split())))) as bundle:
                     license_text = bundle.read("LICENSE").decode("utf-8")
-                    self.assertTrue(license_text.startswith("MIT License\n"))
+                    self.assertTrue(license_text.replace("\r\n", "\n").startswith("MIT License\n"))
                     self.assertIn("Copyright (c) 2026 Lionportal1", license_text)
 
 

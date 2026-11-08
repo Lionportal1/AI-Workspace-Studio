@@ -19,7 +19,7 @@ CORE = ["ai_workspace_portable.py","lib/generate_profiles.py","assets/profile-in
 def source_paths():
     names = set(CORE + ["LICENSE","README.md","AI_WORKSPACE_GUIDE.md","WINDOWS_QUICKSTART.md",
         "ANTIGRAVITY_50_SKILLS_CATALOG.md","CONTRIBUTING.md","SECURITY.md",
-        "CHANGELOG.md","ROADMAP.md",".gitignore","ai-workspace-setup.sh","setup-windows.ps1",
+        "CHANGELOG.md","ROADMAP.md",".gitattributes",".gitignore","ai-workspace-setup.sh","setup-windows.ps1",
         "start-windows.cmd","scripts/audit_sources.py","scripts/build_release.py",
         "tests/test_installer.py","tests/test_cli.sh"])
     for dirname in ("assets/scaffold","docs",".github"):
@@ -135,7 +135,7 @@ def build(out):
         hashlib.sha256(data).hexdigest()+"  "+name for name,data in sorted(assets.items()))+"\n")
     with zipfile.ZipFile(out/(tag+".zip")) as z:
         assert z.testzip() is None
-        assert z.read("LICENSE").startswith(b"MIT License\n")
+        assert z.read("LICENSE").replace(b"\r\n", b"\n").startswith(b"MIT License\n")
         count=sum(n.startswith("assets/scaffold/.agents/skills/") and n.endswith("/SKILL.md") for n in z.namelist())
         assert count==50, "Unexpected skill count: "+str(count)
     print("Built 5 assets for v"+VERSION)
