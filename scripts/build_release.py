@@ -78,20 +78,26 @@ try {
     throw 'Embedded archive checksum mismatch'
   }
   Expand-Archive -LiteralPath $Zip -DestinationPath (Join-Path $Temp 'source') -Force
+  $Python=$null
+  $PythonName=$null
   foreach ($name in @('py','python','python3')) {
     $cmd=Get-Command -Name $name -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
-    if (-not $cmd) { continue }
-    $prefix=if ($name -eq 'py') {@('-3')} else {@()}
-    $good=& $cmd.Source @prefix -c 'import sys;print(int(sys.version_info >= (3,8)))' 2>$null
-    if ($LASTEXITCODE -eq 0 -and $good -eq '1') {
-      & $cmd.Source @prefix (Join-Path $Temp 'source/ai_workspace_portable.py') @Forward
-      exit $LASTEXITCODE
+    if ($cmd) {
+      $Python=$cmd.Source
+      $PythonName=$name
+      break
     }
   }
-  throw 'Python 3.8+ is required.'
+  if (-not $Python) { throw 'Python 3.8+ is required.' }
+  $EntryPoint=Join-Path (Join-Path $Temp 'source') 'ai_workspace_portable.py'
+  if ($PythonName -eq 'py') {
+    & $Python -3 $EntryPoint @Forward
+  } else {
+    & $Python $EntryPoint @Forward
+  }
+  if ($LASTEXITCODE -ne 0) { throw "AI Workspace Studio exited with code $LASTEXITCODE." }
 } catch {
-  Write-Error $_.Exception.Message
-  exit 2
+  throw
 } finally {
   Remove-Item -LiteralPath $Temp -Recurse -Force -ErrorAction SilentlyContinue
 }
