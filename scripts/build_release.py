@@ -18,7 +18,8 @@ CORE = ["ai_workspace_portable.py","lib/generate_profiles.py","assets/profile-in
 
 def source_paths():
     names = set(CORE + ["README.md","AI_WORKSPACE_GUIDE.md","WINDOWS_QUICKSTART.md",
-        "ANTIGRAVITY_50_SKILLS_CATALOG.md","ai-workspace-setup.sh","setup-windows.ps1",
+        "ANTIGRAVITY_50_SKILLS_CATALOG.md","CONTRIBUTING.md","SECURITY.md",
+        "CHANGELOG.md","ROADMAP.md",".gitignore","ai-workspace-setup.sh","setup-windows.ps1",
         "start-windows.cmd","scripts/audit_sources.py","scripts/build_release.py",
         "tests/test_installer.py","tests/test_cli.sh"])
     for dirname in ("assets/scaffold","docs",".github"):
