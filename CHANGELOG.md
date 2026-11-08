@@ -8,5 +8,7 @@
 - Project-scoped default configuration; offline mode, dry-run, and preservation of existing files.
 - CI, GitFlow contribution guidance and deterministic ZIP/TAR.GZ release packaging.
 - Adopt the MIT License (Copyright 2026 Lionportal1) and clarify that optional third-party community integrations retain their own licenses.
+- Fix Windows PowerShell launchers so diagnostics reliably print instead of stopping at a separate Python probe.
+- Show ON/OFF values for Git initialization, initial commit, and all advanced menu toggles, with immediate confirmation.
 
 This entry describes a publication candidate. No GitHub Release exists until the release workflow runs successfully.
