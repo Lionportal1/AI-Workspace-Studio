@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "description": "Single authoritative release source manifest. Directory trees are recursive; generated/cache files are excluded.",
+  "files": [
+    "LICENSE",
+    "README.md",
+    "AI_WORKSPACE_GUIDE.md",
+    "WINDOWS_QUICKSTART.md",
+    "ANTIGRAVITY_50_SKILLS_CATALOG.md",
+    "CONTRIBUTING.md",
+    "SECURITY.md",
+    "CHANGELOG.md",
+    "ROADMAP.md",
+    ".gitattributes",
+    ".gitignore",
+    "ai-workspace-setup.sh",
+    "setup-windows.ps1",
+    "start-windows.cmd",
+    "ai_workspace_portable.py",
+    "lib/generate_profiles.py",
+    "assets/profile-index.json",
+    "scripts/audit_sources.py",
+    "scripts/build_release.py",
+    "scripts/verify_release_archives.py",
+    "release-manifest.json"
+  ],
+  "trees": [
+    "assets/scaffold",
+    "docs",
+    ".github",
+    "tests"
+  ],
+  "exclude_directories": [
+    "__pycache__",
+    ".pytest_cache",
+    ".mypy_cache",
+    ".ruff_cache"
+  ],
+  "exclude_files": [
+    ".DS_Store",
+    "Thumbs.db"
+  ],
+  "exclude_suffixes": [
+    ".pyc",
+    ".pyo"
+  ]
+}
