@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from ai_workspace_portable import VERSION
 
-CORE = ["ai_workspace_portable.py", "lib/generate_profiles.py", "assets/profile-index.json"]
+CORE = ["ai_workspace_portable.py", "lib/generate_profiles.py", "lib/community_imports.py", "assets/profile-index.json"]
 
 
 def source_paths():
