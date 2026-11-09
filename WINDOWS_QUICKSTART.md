@@ -1,80 +1,113 @@
-# AI Workspace Studio v3.1 — Windows quickstart
+# AI Workspace Studio v3.1.0 — Windows quick start
 
-Works on Windows 10/11 using **native PowerShell** (Windows PowerShell 5.1 or PowerShell 7) and Python **3.8+**. No WSL, Git Bash, administrator permissions, or global PowerShell modules required for the built-in skills and project configuration.
+**Current stable release:** [v3.1.0 (November 8, 2026)](https://github.com/Lionportal1/AI-Workspace-Studio/releases/tag/v3.1.0).
 
-## Install prerequisites
+Works on Windows 10/11 with **native Windows PowerShell 5.1 or PowerShell 7** and **Python 3.8+**. For project-local files and built-in skills you do not need WSL, Git Bash, administrator rights, or additional Python packages. Optional integrations have separate requirements.
 
-1. Install Python 3.8+ from <https://www.python.org/downloads/windows/> if not already available. Enable **Add Python to PATH** during installation or use the Python launcher (`py -3`). Reopen PowerShell afterward.
-2. Optional: install Git for Windows for repository initialization/community skill imports; Node.js for npm-backed MCP servers; `uv` for optional uvx-backed servers; the coding agents themselves. The installer does **not** install or authenticate agents automatically.
-3. Extract the **entire** toolkit archive to a regular Windows folder, for example `C:\Dev\AI-Workspace-Studio`. Do not run the script from inside the ZIP preview.
+## 1. Download the right installer
 
-## Launch the menu
+From the [v3.1.0 release assets](https://github.com/Lionportal1/AI-Workspace-Studio/releases/tag/v3.1.0), choose either:
 
-Open PowerShell in the extracted toolkit folder:
+- `AI-Workspace-Studio-v3.1.0-Windows-Standalone.ps1` — single-file Windows installer; keep the accompanying `SHA256SUMS.txt` for integrity verification.
+- `AI-Workspace-Studio-v3.1.0.zip` — complete source archive; extract all contents, then use `setup-windows.ps1` or `start-windows.cmd`.
+
+The Unix standalone (`.sh`) and source TAR.GZ are meant for macOS/Linux use. The Windows PowerShell standalone is **not Authenticode digitally signed** in this release. Checksums verify bytes; they do not grant script-signing trust.
+
+Install Python 3.8+ if needed, and verify:
+
+```powershell
+py -3 --version
+```
+
+Optional software: Git for repository initialization and community skill downloads, Node.js/npm for selected npm-based MCP services, uv/uvx for certain MCP services, and the coding agents themselves. **AI Workspace Studio does not install or authenticate those applications automatically.**
+
+## 2. Verify a downloaded standalone script
+
+Open PowerShell in the folder containing the downloaded script and `SHA256SUMS.txt`. Compare its SHA-256 checksum to the official release-provided value before trusting the file:
+
+```powershell
+$asset = 'AI-Workspace-Studio-v3.1.0-Windows-Standalone.ps1'
+$entry = @(Get-Content -LiteralPath '.\SHA256SUMS.txt' |
+    Where-Object { $_.EndsWith('  ' + $asset) })
+if ($entry.Count -ne 1) { throw 'Missing or ambiguous checksum entry' }
+$expected = ($entry[0] -split '\s+')[0]
+$actual = (Get-FileHash -LiteralPath ('.\' + $asset) -Algorithm SHA256).Hash
+if ($actual -ne $expected) { throw 'Checksum mismatch: do not execute this file' }
+Write-Host 'Installer checksum verified'
+```
+
+Be sure `SHA256SUMS.txt` itself came from the trusted GitHub release.
+
+## 3. Understand PowerShell execution policy
+
+Inspect your effective policy:
+
+```powershell
+Get-ExecutionPolicy -List
+```
+
+On systems using `RemoteSigned`, PowerShell may block an unsigned downloaded `.ps1` because Windows marks it as an internet download. **Only after verifying the trusted release download**, you may remove that internet marker from the file:
+
+```powershell
+Unblock-File -LiteralPath '.\AI-Workspace-Studio-v3.1.0-Windows-Standalone.ps1'
+```
+
+`AllSigned` requires a trusted signature regardless of the internet marker. Organization-managed policies must be respected; do not bypass them. For a personally managed machine, an explicitly chosen process-only policy override is also possible, but it is a security decision and **not** the default installation recommendation:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File '.\AI-Workspace-Studio-v3.1.0-Windows-Standalone.ps1' --menu
+```
+
+Never change a machine-wide policy merely to run an unverified installer. See [release integrity and signing](https://github.com/Lionportal1/AI-Workspace-Studio/issues/24).
+
+## 4. Launch and configure
+
+For the **one-file standalone**:
+
+```powershell
+.\AI-Workspace-Studio-v3.1.0-Windows-Standalone.ps1 --menu
+```
+
+For a **fully extracted source ZIP**, run this from its root:
 
 ```powershell
 .\setup-windows.ps1 --menu
 ```
 
-If execution policy blocks a local script, launch it **only for this process** without changing machine-wide policy:
+Or use `start-windows.cmd` for the menu.
+
+To diagnose a standalone installation without changing a workspace:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\setup-windows.ps1 --menu
+.\AI-Workspace-Studio-v3.1.0-Windows-Standalone.ps1 --doctor
+$LASTEXITCODE
 ```
 
-Or double-click `start-windows.cmd` for the interactive menu. A one-file PowerShell version, `AI-Workspace-Studio-v3.1-Windows-Standalone.ps1`, is also offered separately.
+A successful health check prints `Template    OK` and returns `0`. **Known v3.1.0 limitation:** a missing core template can incorrectly print `Template    MISSING` while returning `0`; always read the diagnostic text. [Issue #16](https://github.com/Lionportal1/AI-Workspace-Studio/issues/16) is fixed on `develop`, but that change is **not in the published v3.1.0 script**.
 
-## Fully automatic example
+## 5. Example project creation
+
+From an extracted ZIP:
 
 ```powershell
 .\setup-windows.ps1 'C:\Dev\MyGame' --agent 'antigravity,opencode,codex' --preset max --stack game --mcp full --offline
 ```
 
-For a safe plan without writing any files:
+Preview your choices without writing files:
 
 ```powershell
 .\setup-windows.ps1 'C:\Dev\MyGame' --agent universal --preset max --dry-run
 ```
 
-For dependency diagnostics:
+The `max` preset copies **50 built-in skill definitions**, plus the bundled plugin directories (two definitions containing five more skill files). `universal` writes configurations for eight agents; it does **not** install the agents. `full` writes 10 MCP server definitions, **six disabled by default**; it does not install, start or authenticate MCP services. Community skills and user-global plugins are separate, opt-in, network-dependent operations. Offline mode disables them.
 
-```powershell
-.\setup-windows.ps1 --doctor
-```
+## Troubleshooting and limits
 
-`--doctor` exits with code `0` when required toolkit templates and the bundled skill index are valid. It exits nonzero (`1`) when a required core file is missing or invalid; a `Template    MISSING` report is an error, not a successful health check. Missing optional tools (such as `uvx`, Codex or Gemini) are informational and do not by themselves fail diagnostics. MCP runtime and authentication status require separate verification.
+- A launcher that prints nothing should be run from the **fully extracted source archive**, not inside ZIP preview. To bypass launcher issues for diagnosis, run `py -3 .\ai_workspace_portable.py --doctor` from the extracted source root.
+- Windows filesystem paths, including spaces, are passed directly to Python; npm MCP launchers use `npx.cmd`.
+- `.agents/state/` contains local MCP state and is excluded from Git by default. Protect existing workspace files; avoid `--force` unless you have reviewed its effects.
+- Project configuration does **not** prove that an external agent, skill collection, plugin or MCP server has been installed, discovered or authenticated.
+- An initial Git commit is attempted only for a newly initialized repository when `--commit` is requested. Review staged files and credential exposure before using that option.
+- Windows PowerShell 5.1/7 and offline workspace creation have been exercised on a real Windows host; CI also runs tests on Windows, macOS and Linux. A successful launcher does not establish full third-party runtime compatibility.
 
-The same flags work on macOS/Linux through `bash ai-workspace-setup.sh` and on all platforms through `python ai_workspace_portable.py`.
-
-## If the PowerShell launcher prints nothing
-
-If `./setup-windows.ps1 --doctor` exits without output, older v3.1.0 release candidates used a separate Python `-c` interpreter probe that could fail silently in some Windows shells. The launcher has been updated to call the selected Python executable directly, allowing the Python engine to report its own version errors.
-
-From the project directory, update the release branch and retry:
-
-```powershell
-git pull --ff-only origin release/3.1.0
-.\\setup-windows.ps1 --doctor
-```
-
-As a direct diagnostic that bypasses the PowerShell launcher:
-
-```powershell
-py -3 .\\ai_workspace_portable.py --doctor
-```
-
-Expected output includes `Template    OK`. The CI suite now checks the actual `--doctor` and `--version` output for the PowerShell launcher and standalone package.
-
-## Windows-specific behavior
-
-- Windows-style paths and paths containing spaces are passed directly to Python as arguments, without shell interpolation.
-- npm MCP servers use `npx.cmd` rather than the POSIX `npx` executable name.
-- All generated JSON and TOML configurations use native path serialization and correct escaping.
-- Runtime MCP state is created under `.agents/state/` and excluded from Git.
-- An existing repository is never automatically committed to; `--commit` only applies when a new repository is initialized during that run.
-- The default install is offline-compatible and does not install global plugins or execute third-party skill scripts.
-- The full MCP pack installs **definitions**, not working MCP binaries, OAuth sessions, or permanent trust grants. Review and enable disabled tools individually.
-
-## Limitations
-
-Windows PowerShell execution could not be exercised on a native Windows host in the build environment. The Python engine, CLI/menu flows, Windows command/path generation, and file preservation behavior are covered by offline tests. Run `--doctor` and check MCP status in your installed agent after creating a workspace.
+For further explanations, see the [setup guide](AI_WORKSPACE_GUIDE.md), [documentation home](docs/README.md) and [security policy](SECURITY.md).
