@@ -33,7 +33,7 @@ jobs:
           python scripts/build_release.py --output dist-compare
           python -c 'import hashlib,pathlib; a=pathlib.Path("dist");b=pathlib.Path("dist-compare");assert {p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in a.iterdir()}=={p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in b.iterdir()}'
       - name: Verify extracted source ZIP and TAR.GZ
-        run: python scripts/verify_release_archives.py --dist dist
+        run: python scripts/verify_release_archives.py --dist dist --allow-exec
       - name: Bash smoke test
         if: runner.os != 'Windows'
         shell: bash
