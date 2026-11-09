@@ -212,6 +212,38 @@ class CommunityImportTests(unittest.TestCase):
         self.assertEqual(result["skills"][0]["status"], "invalid")
         self.assertFalse((self.workspace / ".agents/skills/brainstorming").exists())
 
+    def test_failed_copy_does_not_delete_existing_or_partial_destination(self):
+        self.add_skill("brainstorming")
+        actual_copytree = shutil.copytree
+
+        def simulated_copy(src, dst, **kwargs):
+            if ".agents" in Path(dst).parts:
+                target = Path(dst)
+                target.mkdir(parents=True)
+                (target / "user-note.txt").write_text("preserve", encoding="utf-8")
+                raise OSError("simulated partial copy")
+            return actual_copytree(src, dst, **kwargs)
+
+        with self.fake_git(), patch.object(imports.shutil, "copytree",
+                                          side_effect=simulated_copy):
+            imports.import_community(self.workspace, [self.source()], log=lambda _: None)
+        self.assertEqual(self.manifest()["sources"][0]["skills"][0]["status"], "failed")
+        note = self.workspace / ".agents/skills/brainstorming/user-note.txt"
+        self.assertEqual(note.read_text(encoding="utf-8"), "preserve")
+
+    def test_read_only_report_refuses_path_traversal_in_manifest(self):
+        path = self.workspace / imports.MANIFEST_PATH
+        path.parent.mkdir(parents=True)
+        path.write_text(json.dumps({
+            "schema_version": 2,
+            "sources": [{"vendor": "untrusted", "status": "copied", "commit": COMMIT,
+                         "skills": [{"name": "bad", "status": "copied",
+                                     "installed_path": "../../outside/SKILL.md"}]}]
+        }), encoding="utf-8")
+        messages = []
+        imports.community_report(self.workspace, out=messages.append)
+        self.assertIn("Unsafe installed path in manifest ignored", "\n".join(messages))
+
     def test_invalid_source_root_reports_no_skills(self):
         (self.repository / "skills").mkdir()
         with self.fake_git():
