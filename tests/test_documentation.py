@@ -36,7 +36,8 @@ class DocumentationTests(unittest.TestCase):
                                     "%s contains broken local link: %s" % (page, target))
 
     def test_mentioned_cli_flags_exist(self):
-        flags = set(build_parser()._option_string_actions)
+        # --output belongs to scripts/build_release.py, not the installer.
+        flags = set(build_parser()._option_string_actions) | {"--output"}
         for page in [ROOT / "README.md", ROOT / "AI_WORKSPACE_GUIDE.md",
                      ROOT / "WINDOWS_QUICKSTART.md", ROOT / "docs/README.md"]:
             text = page.read_text(encoding="utf-8")
