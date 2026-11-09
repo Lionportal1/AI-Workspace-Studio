@@ -217,9 +217,10 @@ def _import_source(workspace, dest, vendor, url, subdir, previous):
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copytree(folder, destination, symlinks=False)
         except (OSError, shutil.Error) as exc:
-            if destination.exists():
-                shutil.rmtree(destination)
-            record.update(status="failed", reason="Unable to copy skill: %s" % exc)
+            # Never remove an existing destination on a failed copy: another
+            # process or a user may have created it concurrently.
+            record.update(status="failed",
+                          reason="Unable to copy skill (inspect possible partial directory): %s" % exc)
             continue
         record.update(status="copied", reason=None, sha256=digest)
 
@@ -335,8 +336,18 @@ def community_report(workspace, out=print):
         if source.get("reason"):
             out("  Note: " + source["reason"])
         for skill in source.get("skills", []):
-            rel = skill.get("installed_path") or skill_path(skill["name"])
-            path = workspace / rel
+            rel = skill.get("installed_path") or skill_path(skill.get("name", "unknown"))
+            if not isinstance(rel, str):
+                out("  Invalid installed path in manifest (non-string)")
+                continue
+            from pathlib import PurePosixPath
+            parsed = PurePosixPath(rel)
+            if (parsed.is_absolute() or ".." in parsed.parts or "\\" in rel
+                    or len(parsed.parts) != 4 or parsed.parts[:2] != (".agents", "skills")
+                    or parsed.parts[-1] != "SKILL.md"):
+                out("  Unsafe installed path in manifest ignored: " + repr(rel))
+                continue
+            path = workspace.joinpath(*parsed.parts)
             present = path.is_file() and not path.is_symlink()
             out("  %s | %s | present=%s | license=%s | %s" %
                 (skill.get("display_name", skill.get("name")), skill.get("status", "unknown"),
