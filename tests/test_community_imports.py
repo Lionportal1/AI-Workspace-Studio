@@ -1,5 +1,6 @@
 """Offline community import, inventory and safety regression tests (no network)."""
 from contextlib import contextmanager
+import os
 import json
 from pathlib import Path, PureWindowsPath
 import shutil
@@ -179,6 +180,29 @@ class CommunityImportTests(unittest.TestCase):
         with self.fake_git():
             imports.import_community(self.workspace, [self.source()], log=lambda _: None)
         self.assertIn("No SKILL.md", self.manifest()["sources"][0]["reason"])
+
+
+class OptionalUpstreamLayoutTests(unittest.TestCase):
+    @unittest.skipUnless(os.environ.get("AIWS_TEST_COMMUNITY_UPSTREAM") == "1",
+                         "Upstream network integration requires explicit opt-in")
+    def test_superpowers_and_caveman_public_skill_layout(self):
+        if not shutil.which("git"):
+            self.skipTest("Git unavailable")
+        with tempfile.TemporaryDirectory(prefix="aiws-upstream-verification-") as root:
+            workspace = Path(root) / "workspace"
+            workspace.mkdir()
+            selected = [
+                ("superpowers", "https://github.com/obra/superpowers.git", "skills"),
+                ("caveman", "https://github.com/JuliusBrussee/caveman.git", "skills"),
+            ]
+            imports.import_community(workspace, selected, strict=True, log=lambda _: None)
+            manifest = imports.read_manifest(workspace)
+            self.assertEqual(len(manifest["sources"]), 2)
+            for entry in manifest["sources"]:
+                with self.subTest(vendor=entry["vendor"]):
+                    self.assertTrue(entry["fetched"])
+                    self.assertGreater(entry["counts"]["verified"], 0)
+                    self.assertGreater(entry["counts"]["copied"], 0)
 
 
 if __name__ == "__main__":
