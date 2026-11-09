@@ -124,12 +124,15 @@ def _digest(path):
 
 def _counts(skills):
     categories = ("copied", "unchanged", "preserved", "conflict", "invalid", "failed")
-    return {key: sum(skill["status"] == key for skill in skills) for key in categories}
+    counts = {key: sum(skill["status"] == key for skill in skills) for key in categories}
+    counts["discovered"] = len(skills)
+    counts["verified"] = sum(skill.get("validated", False) for skill in skills)
+    return counts
 
 
 def _source_result(vendor, url, subdir):
-    return {"vendor": vendor, "url": url, "subdir": subdir, "commit": None,
-            "fetched": False, "status": "failed", "reason": None,
+    return {"vendor": vendor, "url": url, "subdir": subdir, "requested": True,
+            "commit": None, "fetched": False, "status": "failed", "reason": None,
             "skills": [], "counts": _counts([])}
 
 
@@ -158,7 +161,7 @@ def _import_source(workspace, dest, vendor, url, subdir, previous):
                   "source_path": file.relative_to(dest).as_posix(),
                   "installed_path": skill_path(name),
                   "status": "invalid", "reason": None, "license": "unverified",
-                  "license_file": license_file, "sha256": None}
+                  "license_file": license_file, "sha256": None, "validated": False}
         skills.append(record)
         if not VALID_NAME.fullmatch(name):
             record["reason"] = "Unsafe or unsupported skill folder name"
@@ -167,7 +170,9 @@ def _import_source(workspace, dest, vendor, url, subdir, previous):
             record.update(status="conflict", reason="Duplicate name within the same source")
             continue
         used.add(name)
-        if file.is_symlink() or any(p.is_symlink() for p in folder.parents if p != dest) or any(
+        nested = folder.relative_to(dest).parts
+        parts = [dest.joinpath(*nested[:i]) for i in range(1, len(nested) + 1)]
+        if file.is_symlink() or any(p.is_symlink() for p in parts) or any(
                 p.is_symlink() for p in folder.rglob("*")):
             record["reason"] = "Symlink in source skill directory"
             continue
@@ -176,6 +181,7 @@ def _import_source(workspace, dest, vendor, url, subdir, previous):
             record["reason"] = invalid
             continue
         record["license"] = fields.get("license", "unverified") or "unverified"
+        record["validated"] = True
         digest = _digest(file)
         target = workspace / record["installed_path"]
         destination = target.parent
@@ -255,8 +261,9 @@ def import_community(workspace, sources, strict=False, log=print):
             result["counts"] = _counts(result["skills"])
             current.append(result)
             c = result["counts"]
-            log("Community %s: %s; copied=%d unchanged=%d preserved=%d conflict=%d invalid=%d failed=%d%s" %
-                (vendor, result["status"], c["copied"], c["unchanged"], c["preserved"],
+            log("Community %s: %s; fetched=%s discovered=%d verified=%d copied=%d unchanged=%d preserved=%d conflict=%d invalid=%d failed=%d%s" %
+                (vendor, result["status"], "yes" if result["fetched"] else "no",
+                 c["discovered"], c["verified"], c["copied"], c["unchanged"], c["preserved"],
                  c["conflict"], c["invalid"], c["failed"],
                  ("; " + result["reason"]) if result["reason"] else ""))
     selected = {s["vendor"] for s in current}
