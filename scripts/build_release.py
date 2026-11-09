@@ -5,9 +5,7 @@ import base64
 import gzip
 import hashlib
 import io
-import json
 from pathlib import Path
-import re
 import sys
 import tarfile
 import zipfile
@@ -15,7 +13,6 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from ai_workspace_portable import VERSION
-from scripts.audit_sources import audit
 
 CORE = ["ai_workspace_portable.py","lib/generate_profiles.py","assets/profile-index.json"]
 
@@ -135,6 +132,8 @@ __PAYLOAD__
 
 def verify_source_zip(path):
     """Reject corrupt/missing release payload members and inconsistent skill tiers."""
+    import json
+    import re
     try:
         with zipfile.ZipFile(path) as archive:
             bad = archive.testzip()
@@ -179,6 +178,7 @@ def verify_source_zip(path):
 
 def build(out):
     # Validations must remain active with python -O.
+    from scripts.audit_sources import audit
     audit(ROOT)
     out.mkdir(parents=True, exist_ok=True)
     tag = "AI-Workspace-Studio-v" + VERSION
