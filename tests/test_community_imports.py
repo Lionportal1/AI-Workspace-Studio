@@ -155,6 +155,26 @@ class CommunityImportTests(unittest.TestCase):
         self.assertTrue(results["empty"]["fetched"])
         self.assertIn("Missing or unsafe skills directory", results["empty"]["reason"])
 
+    def test_all_community_sources_are_reported_skipped_when_offline(self):
+        result = subprocess.run(
+            [sys.executable, str(ROOT / "ai_workspace_portable.py"), str(self.workspace),
+             "--agent", "antigravity", "--preset", "minimal", "--mcp", "none",
+             "--community", "all", "--offline", "--no-git"],
+            capture_output=True, text=True, timeout=60)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(len(self.manifest()["sources"]), 7)
+        self.assertTrue(all(source["status"] == "skipped"
+                            for source in self.manifest()["sources"]))
+        self.assertTrue(all("Disabled by --offline" in source["reason"]
+                            for source in self.manifest()["sources"]))
+        self.assertIn("Community superpowers: skipped", result.stdout)
+        report = subprocess.run(
+            [sys.executable, str(ROOT / "ai_workspace_portable.py"),
+             str(self.workspace), "--community-report"],
+            capture_output=True, text=True, timeout=30)
+        self.assertEqual(report.returncode, 0, report.stdout + report.stderr)
+        self.assertIn("Caveman [skipped]", report.stdout)
+
     def test_missing_git_persists_all_requested_sources(self):
         with patch.object(imports.shutil, "which", return_value=None), \
              patch.object(imports.subprocess, "run") as runner:
