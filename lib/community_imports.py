@@ -118,7 +118,7 @@ def _frontmatter(skill_file):
         # Require a nonempty indented continuation without evaluating YAML.
         lines = header.splitlines()
         position = next((i for i, line in enumerate(lines)
-                         if re.match(r"^description:\\s*[|>][+-]?\\s*$", line)), None)
+                         if re.match(r"^description:\s*[|>][+-]?\s*$", line)), None)
         if position is None:
             return None, "Malformed frontmatter description block"
         continuation = []
