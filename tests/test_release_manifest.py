@@ -8,7 +8,7 @@ import unittest
 from unittest.mock import patch
 import zipfile
 
-from scripts import build_release
+from scripts import build_release, verify_release_archives
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -69,6 +69,13 @@ class ReleaseManifestTests(unittest.TestCase):
             with patch.object(build_release, "ROOT", root):
                 with self.assertRaisesRegex(RuntimeError, "omits required files"):
                     build_release.source_paths()
+
+    def test_extract_test_execution_requires_explicit_opt_in(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with patch.object(verify_release_archives.subprocess, "run") as runner:
+                with self.assertRaisesRegex(RuntimeError, "--allow-exec"):
+                    verify_release_archives.run_checks(Path(directory))
+                runner.assert_not_called()
 
     def test_standalone_embeds_only_runtime_files(self):
         windows, _ = build_release.standalones()
