@@ -2,7 +2,7 @@
 
 **Cross-platform, menu-driven bootstrapper for AI-assisted development workspaces.** Build repeatable configurations for Antigravity, OpenCode, Claude Code, Codex, Cursor, Gemini CLI, GitHub Copilot and Devin Desktop, individually or all at once.
 
-> **Status:** v3.1.0 candidate for its first GitHub release. Installer generation and offline tests are included; live third-party integrations and native Windows hosts must still be validated by users. The original project files are preserved in this repository.
+> **Status:** [v3.1.0 is a published stable GitHub Release](https://github.com/Lionportal1/AI-Workspace-Studio/releases/tag/v3.1.0) (November 8, 2026). Release archives and standalone scripts are available. Automated Windows/macOS/Linux testing and user-reported Windows installation tests have been performed; third-party agent, skill, plugin and MCP availability still requires separate verification.
 
 ## Capabilities
 
@@ -18,7 +18,7 @@
 
 ## Quick start
 
-Download an asset from [GitHub Releases](../../releases) once a release is published, or clone the repository.
+Download the verified [v3.1.0 release assets](https://github.com/Lionportal1/AI-Workspace-Studio/releases/tag/v3.1.0), or clone the repository. The standalone Windows and Unix launchers are **single files**; the ZIP/TAR.GZ editions must be extracted completely.
 
 **Windows** (PowerShell, no WSL or Git Bash):
 
@@ -50,6 +50,7 @@ The default setup does **not** fetch external skills, install applications, laun
 
 ## Installation, testing and contribution
 
+- [Documentation home / user handbook](docs/README.md)
 - [Windows quick start](WINDOWS_QUICKSTART.md)
 - [Complete configuration guide](AI_WORKSPACE_GUIDE.md)
 - [Built-in skills](ANTIGRAVITY_50_SKILLS_CATALOG.md)

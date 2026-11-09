@@ -1,44 +1,44 @@
-# AI Workspace Studio v3.1 — Windows, macOS and Linux
+# AI Workspace Studio v3.1.0 — Setup and reference
 
-**Windows:** run `setup-windows.ps1 --menu` in PowerShell after extracting the ZIP, or use `start-windows.cmd`. Python 3.8+ is required; WSL and Git Bash are not required. For a single-file distribution, use `AI-Workspace-Studio-v3.1-Windows-Standalone.ps1`. See `WINDOWS_QUICKSTART.md`.
+**Release:** [Stable v3.1.0 (November 8, 2026)](https://github.com/Lionportal1/AI-Workspace-Studio/releases/tag/v3.1.0). This guide describes the v3.1.0 setup interface; changes merged to `develop` are not part of that published artifact.
 
-**macOS/Linux:** run `bash ai-workspace-setup.sh --menu`. The Python core, built-in templates, profile selection, and validation logic are shared across platforms.
+**Windows:** after extracting the source ZIP, run `.\setup-windows.ps1 --menu` in native PowerShell, or use `start-windows.cmd`. The one-file version is `AI-Workspace-Studio-v3.1.0-Windows-Standalone.ps1`. See [Windows quickstart](WINDOWS_QUICKSTART.md).
 
----
+**macOS/Linux:** after extracting the source archive, run `bash ai-workspace-setup.sh --menu`, or launch the one-file `AI-Workspace-Studio-v3.1.0-Unix-Standalone.sh`. Python 3.8+ is required on every platform.
 
-# AI Workspace Studio v3.0 — Setup and reference
+**Documentation home:** [docs/README.md](docs/README.md)
 
-**Updated:** November 7, 2026
+**Updated:** November 9, 2026
 
 This toolkit converts the previous 50-skill Antigravity-only initializer into a cross-agent workspace installer with an interactive terminal dashboard, eight coding agent profiles, a portable skill library, a configurable MCP catalog and optional community downloads.
 
 ## Requirements
 
-- macOS, Linux, WSL or a Bash-capable Windows shell (Git Bash may work; WSL is preferred).
-- Bash **3.2+** and Python **3.8+** for the scaffold; neither requires third-party Python packages.
+- Windows 10/11 with native Windows PowerShell 5.1 or PowerShell 7, or macOS/Linux with Bash. Windows users do **not** need WSL or Git Bash.
+- Python **3.8+** for all platforms. Bash is required for macOS/Linux shell launchers; the Python installer itself needs no third-party Python packages.
 - Git for optional community-skill downloads or Git initialization.
 - Node.js/npm or uv/uvx *only when you want to launch relevant MCP servers*.
 - The target coding assistant is not required just to generate files. You still need to install it separately.
 
-## Launch the interactive dashboard
+## Launch the interactive terminal menu
 
-From the extracted ZIP:
+From an extracted source archive:
+
+```powershell
+.\setup-windows.ps1 --menu
+```
+
+On macOS/Linux:
 
 ```bash
 bash ai-workspace-setup.sh --menu
 ```
 
-Or, if you downloaded the single-file edition:
+For a downloaded standalone launcher, use its exact release filename (shown above) with `--menu`. On a normal interactive terminal, launching without arguments also opens the menu.
 
-```bash
-bash ai-workspace-setup-standalone.sh --menu
-```
+The current interface is a **plain, numbered terminal menu**, not a graphical app or an advanced searchable TUI. It configures workspace path, agent selection, skill tier, community skill sources, MCP definitions, optional Antigravity global plugins and advanced safety settings. It previews configuration and requests confirmation before writing.
 
-When run in a normal interactive terminal with **no arguments**, either command opens the menu automatically.
-
-The menu has editable sections for workspace path, agent selection (one, several or all), built-in skill tier, community repositories, MCP presets, native Antigravity plugins and advanced options, followed by a preview and confirmation.
-
-**Tip:** No `gum`, `dialog`, `whiptail` or other UI dependencies are required. The dashboard uses colored ANSI output in supported terminals and plain numbered choices elsewhere.
+No `gum`, `dialog` or `whiptail` dependency is required.
 
 ## Profiles and native files
 
@@ -66,7 +66,7 @@ The menu has editable sections for workspace path, agent selection (one, several
 
 The 50 skills are generated under `.agents/skills/<name>/SKILL.md`. Each file has a scoped description and is intended for *on-demand* loading. Having 50 available does not mean sending all 50 skill bodies to every agent prompt.
 
-Community skill imports are **additional** and require `--community curated|all`. The toolkit uses curated repositories including Superpowers, Matt Pocock's skills, Anthropic skills, Vercel agent skills, Caveman, and larger community collections. Review every copied skill's instructions and helper scripts before use. An import can fail or change as upstream repositories evolve.
+Community skill imports are **additional** and require `--community curated|all` with network access and Git. The toolkit attempts five or seven configured repositories, including Superpowers and Caveman. It copies individual `skills/**/SKILL.md` directories under `.agents/skills/`; this does **not** automatically install separate native plugin packages, discover them in every agent, or activate imported skills. Existing names are skipped, and non-strict runs can warn about failed sources while still reporting a ready workspace. Inspect the terminal log and `.agents/skill-sources.lock.json` (when created), and review third-party instructions before use. Improved per-source receipts are tracked in [#88](https://github.com/Lionportal1/AI-Workspace-Studio/issues/88).
 
 ## MCP packs
 
@@ -84,7 +84,7 @@ Some MCP packages are fetched at first launch by `npx` or `uvx`. Ensure runtime 
 
 ## Optional plugin integrations
 
-Antigravity has an opt-in native global-plugin option (`--native-plugins core|all`). `core` attempts Superpowers using `agy plugin install https://github.com/obra/superpowers`. `all` also attempts the extended list maintained by the legacy engine. These installs can modify user-global configuration and might require further approvals or signed-in accounts.
+Antigravity has an opt-in **user-global** plugin option (`--native-plugins core|all`). `core` attempts Superpowers using `agy plugin install https://github.com/obra/superpowers`. `all` additionally attempts `firebase`, `flutter` and `gcalendar` through `agy`; it does **not** automatically install Caveman's separate native plugin. Availability depends on the local CLI, vendor integration, network and approvals. Non-strict failures can be reported as warnings. Review global scope and use `--strict` when you want failures to stop installation.
 
 Other tools have their own plugin ecosystems, so the initializer deliberately **does not auto-install unknown or unreviewed third-party packages** into OpenCode, Cursor, Claude Code or Codex. Their profile guide documents the applicable native plugin and skills locations; add packages only after reviewing permissions and compatibility.
 
@@ -138,17 +138,21 @@ Use `--stack general|web|dotnet|python|game|devops` to generate a scoped technol
 - Existing JSON configuration entries are merged by name. Existing entries take precedence.
 - Existing Codex TOML MCP server stanzas are not recreated. Other TOML content is preserved.
 - `--force` replaces certain generated *template files*, so use it only when you intend to discard those local template edits. It never overrides existing MCP server definitions.
-- `--commit` stages only known bootstrap assets and commits them only in a newly created Git repository; an existing repository is never auto-committed.
+- `--commit` attempts an initial commit **only** after initializing a new repository. It stages paths from a fixed bootstrap list; preexisting files under those paths could be included, so use it only after reviewing what would be staged. Existing Git repositories are not automatically committed.
 - `--dry-run` previews without creating a workspace or using the network.
 - External skills and global plugins are opt-in; `--offline` suppresses them.
 
 ## How to test
 
+From the extracted source archive or Git checkout:
+
 ```bash
-bash test_ai_workspace_studio.sh
+python3 -m unittest discover -s tests -p 'test_*.py' -v
+python3 scripts/audit_sources.py
+python3 scripts/build_release.py --output dist
 ```
 
-Tests run offline, generate workspaces in temporary directories and validate agent configs, all three skill tiers, MCP entries, JSON/TOML syntax, Git behavior, repeat-run preservation and the menu flow.
+On macOS/Linux, additionally run `bash tests/test_cli.sh`. On native Windows use `py -3` in place of `python3` if necessary. CI exercises Windows, macOS, and Linux runners, but cannot verify that third-party agents or MCP servers are installed and authenticated on a user's machine. [Release testing details](docs/maintainers/RELEASING.md).
 
 ## Primary source documentation
 
