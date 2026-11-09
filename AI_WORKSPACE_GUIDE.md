@@ -66,7 +66,17 @@ No `gum`, `dialog` or `whiptail` dependency is required.
 
 The 50 skills are generated under `.agents/skills/<name>/SKILL.md`. Each file has a scoped description and is intended for *on-demand* loading. Having 50 available does not mean sending all 50 skill bodies to every agent prompt.
 
-Community skill imports are **additional** and require `--community curated|all` with network access and Git. The toolkit attempts five or seven configured repositories, including Superpowers and Caveman. It copies individual `skills/**/SKILL.md` directories under `.agents/skills/`; this does **not** automatically install separate native plugin packages, discover them in every agent, or activate imported skills. Existing names are skipped, and non-strict runs can warn about failed sources while still reporting a ready workspace. Inspect the terminal log and `.agents/skill-sources.lock.json` (when created), and review third-party instructions before use. Improved per-source receipts are tracked in [#88](https://github.com/Lionportal1/AI-Workspace-Studio/issues/88).
+Community skill imports are **additional** and require `--community curated|all` with network access and Git. The toolkit requests five or seven configured repositories, including Superpowers and Caveman, and copies valid individual `skills/**/SKILL.md` folders into `.agents/skills/<skill-name>/`. This does **not** install separate native plugin packages, prove any specific agent discovers a skill, or activate it. Missing Git, failed clones, invalid skills, duplicate names, and missing source directories are reported for each source, including attempts that copy **zero** skills.
+
+After a community import, the installer writes a versioned `.agents/skill-sources.lock.json` with each requested source, Git commit (when verified), copied/preserved/skipped skill entries, exact workspace-relative paths, and explicit reasons. It records upstream `license` metadata when present; `unverified` means **check the upstream license yourself**. Existing files are preserved, and a rerun distinguishes unchanged skills from locally modified copies and cross-source conflicts. `--strict` exits nonzero on incomplete source imports **after preserving the report**.
+
+Inspect your workspace's community inventory at any time, even with no network:
+
+```bash
+python3 ai_workspace_portable.py MyWorkspace --community-report
+```
+
+On Windows use `py -3 ai_workspace_portable.py MyWorkspace --community-report`, or the equivalent `setup-windows.ps1` launcher. The command is **read-only** and displays source names (e.g., Superpowers / brainstorming), installed file paths and whether each file still exists. Imported skills can be mirrored into selected agent-specific folders during workspace generation, but discovery and activation remain agent-dependent. Community imports never execute downloaded scripts. The [import reliability issue #88](https://github.com/Lionportal1/AI-Workspace-Studio/issues/88) tracks this implementation; broader agent-compatibility testing remains in #54.
 
 ## MCP packs
 
