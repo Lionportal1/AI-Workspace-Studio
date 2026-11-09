@@ -33,6 +33,7 @@ class ReleaseManifestTests(unittest.TestCase):
             files = [
                 "ai_workspace_portable.py",
                 "lib/generate_profiles.py",
+                "lib/community_imports.py",
                 "assets/profile-index.json",
                 "LICENSE",
                 "tests/test_cli.sh",
@@ -48,7 +49,7 @@ class ReleaseManifestTests(unittest.TestCase):
             (root / "tests/test_ignored.pyc").write_bytes(b"cached")
             manifest = {
                 "schema_version": 1,
-                "files": files[:5] + ["release-manifest.json"],
+                "files": files[:6] + ["release-manifest.json"],
                 "trees": ["tests"],
                 "exclude_directories": ["__pycache__"],
                 "exclude_suffixes": [".pyc"],
