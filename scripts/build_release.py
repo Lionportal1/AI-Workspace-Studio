@@ -154,20 +154,66 @@ __PAYLOAD__
 """.replace("__PAYLOAD__",payload).replace("__HASH__",digest)
     return windows.encode(),unix.encode()
 
+def verify_source_zip(path):
+    """Reject corrupt/missing release payload members and inconsistent skill tiers."""
+    import json
+    import re
+    try:
+        with zipfile.ZipFile(path) as archive:
+            bad = archive.testzip()
+            if bad is not None:
+                raise RuntimeError("Corrupt release ZIP member: " + bad)
+            names = archive.namelist()
+            if len(names) != len(set(names)):
+                raise RuntimeError("Duplicate release ZIP member names")
+            try:
+                license_text = archive.read("LICENSE").replace(b"\r\n", b"\n")
+            except KeyError as exc:
+                raise RuntimeError("Release ZIP is missing the LICENSE") from exc
+            if not license_text.startswith(b"MIT License\n"):
+                raise RuntimeError("Release ZIP does not contain the expected MIT License")
+            try:
+                tiers = json.loads(archive.read("assets/profile-index.json").decode("utf-8"))
+            except (KeyError, UnicodeError, ValueError) as exc:
+                raise RuntimeError("Release ZIP is missing a valid skill index") from exc
+            if not isinstance(tiers, dict):
+                raise RuntimeError("Release ZIP skill index must be a JSON object")
+            for preset, expected in (("minimal", 20), ("balanced", 35), ("max", 50)):
+                items = tiers.get(preset)
+                if not isinstance(items, list) or len(items) != expected or len(set(
+                        item for item in items if isinstance(item, str))) != expected:
+                    raise RuntimeError("Release ZIP has invalid %s skill tier" % preset)
+                if any(not isinstance(item, str) or not re.fullmatch(r"[a-z0-9-]+", item)
+                       for item in items):
+                    raise RuntimeError("Release ZIP has invalid %s skill IDs" % preset)
+            if not set(tiers["minimal"]) <= set(tiers["balanced"]) <= set(tiers["max"]):
+                raise RuntimeError("Release ZIP skill tiers are not nested")
+            prefix = "assets/scaffold/.agents/skills/"
+            found = {name[len(prefix):-len("/SKILL.md")] for name in names
+                     if name.startswith(prefix) and name.endswith("/SKILL.md")}
+            if found != set(tiers["max"]):
+                raise RuntimeError("Release ZIP skill count/index mismatch: %d entries" % len(found))
+            if len(found) != 50:
+                raise RuntimeError("Unexpected release ZIP skill count: %d" % len(found))
+    except (OSError, zipfile.BadZipFile, zipfile.LargeZipFile) as exc:
+        raise RuntimeError("Invalid release ZIP: %s" % exc) from exc
+    return True
+
+
 def build(out):
-    out.mkdir(parents=True,exist_ok=True)
-    tag="AI-Workspace-Studio-v"+VERSION
-    ps,sh=standalones()
-    assets={tag+".zip":archive_zip(source_paths()),tag+".tar.gz":archive_tar(source_paths()),
-            tag+"-Windows-Standalone.ps1":ps,tag+"-Unix-Standalone.sh":sh}
-    for name,data in assets.items(): (out/name).write_bytes(data)
-    (out/"SHA256SUMS.txt").write_text("\n".join(
+    # Validations must remain active with python -O.
+    from scripts.audit_sources import audit
+    audit(ROOT)
+    out.mkdir(parents=True, exist_ok=True)
+    tag = "AI-Workspace-Studio-v" + VERSION
+    ps, sh = standalones()
+    assets = {tag+".zip": archive_zip(source_paths()), tag+".tar.gz": archive_tar(source_paths()),
+              tag+"-Windows-Standalone.ps1": ps, tag+"-Unix-Standalone.sh": sh}
+    for name, data in assets.items():
+        (out / name).write_bytes(data)
+    (out / "SHA256SUMS.txt").write_text("\n".join(
         hashlib.sha256(data).hexdigest()+"  "+name for name,data in sorted(assets.items()))+"\n")
-    with zipfile.ZipFile(out/(tag+".zip")) as z:
-        assert z.testzip() is None
-        assert z.read("LICENSE").replace(b"\r\n", b"\n").startswith(b"MIT License\n")
-        count=sum(n.startswith("assets/scaffold/.agents/skills/") and n.endswith("/SKILL.md") for n in z.namelist())
-        assert count==50, "Unexpected skill count: "+str(count)
+    verify_source_zip(out / (tag+".zip"))
     print("Built 5 assets for v"+VERSION)
 
 if __name__=="__main__":
