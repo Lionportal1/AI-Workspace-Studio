@@ -216,13 +216,13 @@ class CommunityImportTests(unittest.TestCase):
         self.add_skill("brainstorming")
         actual_copytree = shutil.copytree
 
-        def simulated_copy(src, dst, **kwargs):
+        def simulated_copy(src, dst, *args, **kwargs):
             if ".agents" in Path(dst).parts:
                 target = Path(dst)
                 target.mkdir(parents=True)
                 (target / "user-note.txt").write_text("preserve", encoding="utf-8")
                 raise OSError("simulated partial copy")
-            return actual_copytree(src, dst, **kwargs)
+            return actual_copytree(src, dst, *args, **kwargs)
 
         with self.fake_git(), patch.object(imports.shutil, "copytree",
                                           side_effect=simulated_copy):
