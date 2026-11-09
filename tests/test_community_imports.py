@@ -91,6 +91,23 @@ class CommunityImportTests(unittest.TestCase):
         self.assertIn("not proof of agent discovery", result.stdout)
         self.assertEqual(report_file.read_bytes(), before)
 
+    def test_caveman_folded_description_frontmatter_is_valid(self):
+        self.add_skill("caveman-review", content=(
+            "---\nname: caveman-review\ndescription: >\n"
+            "  Short first line.\n"
+            "  Longer second line that remains part of the description.\n"
+            "---\n\n# Caveman Review\n"))
+        self.add_skill("caveman-empty", content=(
+            "---\nname: caveman-empty\ndescription: >\n---\n\n# Empty\n"))
+        with self.fake_git():
+            copied = imports.import_community(self.workspace, [self.source("caveman")],
+                                              log=lambda _: None)
+        self.assertEqual(copied, 1)
+        statuses = {skill["name"]: skill["status"]
+                    for skill in self.manifest()["sources"][0]["skills"]}
+        self.assertEqual(statuses["caveman-review"], "copied")
+        self.assertEqual(statuses["caveman-empty"], "invalid")
+
     def test_repeated_import_preserves_existing_and_local_edits(self):
         self.add_skill("brainstorming")
         with self.fake_git():
