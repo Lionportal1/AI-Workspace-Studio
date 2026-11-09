@@ -111,8 +111,23 @@ def _frontmatter(skill_file):
     description = fields.get("description")
     if not name or not VALID_NAME.fullmatch(name):
         return None, "Missing or invalid frontmatter name"
-    if not description or description in ("|", ">"):
-        return None, "Missing or unsupported frontmatter description"
+    if not description:
+        return None, "Missing frontmatter description"
+    if description in ("|", ">", "|-", ">-", "|+", ">+"):
+        # Folded/literal YAML block scalars are common in published skill sets.
+        # Require a nonempty indented continuation without evaluating YAML.
+        lines = header.splitlines()
+        position = next((i for i, line in enumerate(lines)
+                         if re.match(r"^description:\\s*[|>][+-]?\\s*$", line)), None)
+        if position is None:
+            return None, "Malformed frontmatter description block"
+        continuation = []
+        for line in lines[position + 1:]:
+            if line and not line[0].isspace():
+                break
+            continuation.append(line)
+        if not any(line.strip() for line in continuation):
+            return None, "Empty frontmatter description block"
     if name != skill_file.parent.name:
         return None, "Frontmatter name differs from skill folder"
     return fields, None
