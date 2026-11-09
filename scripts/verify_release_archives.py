@@ -38,7 +38,9 @@ def verify_contents(members, expected):
             raise RuntimeError("Archive bytes differ from source: " + name)
 
 
-def run_checks(root):
+def run_checks(root, allow_exec=False):
+    if not allow_exec:
+        raise RuntimeError("Executing code extracted from source archives requires --allow-exec")
     commands = [
         [sys.executable, "-m", "unittest", "discover", "-s", "tests", "-p", "test_*.py", "-v"],
         [sys.executable, "scripts/audit_sources.py"],
@@ -53,7 +55,7 @@ def run_checks(root):
                 " ".join(command), result.stdout[-3000:], result.stderr[-3000:]))
 
 
-def check_zip(archive, expected, destination):
+def check_zip(archive, expected, destination, allow_exec=False):
     with zipfile.ZipFile(archive) as z:
         bad = z.testzip()
         if bad is not None:
@@ -66,11 +68,11 @@ def check_zip(archive, expected, destination):
         file = safe_path(destination, name)
         file.parent.mkdir(parents=True, exist_ok=True)
         file.write_bytes(data)
-    run_checks(destination)
+    run_checks(destination, allow_exec)
     print("Verified ZIP: %d manifest files, extracted test suite passed" % len(members))
 
 
-def check_tar(archive, expected, destination):
+def check_tar(archive, expected, destination, allow_exec=False):
     with tarfile.open(archive, mode="r:gz") as t:
         members = []
         for item in t:
@@ -85,14 +87,18 @@ def check_tar(archive, expected, destination):
         file = safe_path(destination, name)
         file.parent.mkdir(parents=True, exist_ok=True)
         file.write_bytes(data)
-    run_checks(destination)
+    run_checks(destination, allow_exec)
     print("Verified TAR.GZ: %d manifest files, extracted test suite passed" % len(members))
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dist", default="dist")
+    parser.add_argument("--allow-exec", action="store_true",
+                        help="Explicitly permit execution of extracted archive tests (trusted build artifacts only)")
     args = parser.parse_args()
+    if not args.allow_exec:
+        raise RuntimeError("Archive self-tests execute extracted code; pass --allow-exec only for trusted build artifacts")
     dist = Path(args.dist).resolve()
     tag = "AI-Workspace-Studio-v" + VERSION
     expected = set(source_paths())
@@ -101,8 +107,8 @@ def main():
     if "tests/test_release_license.py" not in expected or "tests/test_cli.sh" not in expected:
         raise RuntimeError("Missing required archive test coverage")
     with tempfile.TemporaryDirectory(prefix="aiws-release-verification-") as temp:
-        check_zip(dist / (tag + ".zip"), expected, Path(temp) / "zip")
-        check_tar(dist / (tag + ".tar.gz"), expected, Path(temp) / "tar")
+        check_zip(dist / (tag + ".zip"), expected, Path(temp) / "zip", allow_exec=args.allow_exec)
+        check_tar(dist / (tag + ".tar.gz"), expected, Path(temp) / "tar", allow_exec=args.allow_exec)
     print("Source archive verification passed")
 
 
