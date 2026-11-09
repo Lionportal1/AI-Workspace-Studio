@@ -5,7 +5,8 @@ import base64
 import gzip
 import hashlib
 import io
-from pathlib import Path
+import json
+from pathlib import Path, PurePosixPath
 import sys
 import tarfile
 import zipfile
@@ -14,20 +15,43 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from ai_workspace_portable import VERSION
 
-CORE = ["ai_workspace_portable.py","lib/generate_profiles.py","assets/profile-index.json"]
+CORE = ["ai_workspace_portable.py", "lib/generate_profiles.py", "assets/profile-index.json"]
+
 
 def source_paths():
-    names = set(CORE + ["LICENSE","README.md","AI_WORKSPACE_GUIDE.md","WINDOWS_QUICKSTART.md",
-        "ANTIGRAVITY_50_SKILLS_CATALOG.md","CONTRIBUTING.md","SECURITY.md",
-        "CHANGELOG.md","ROADMAP.md",".gitattributes",".gitignore","ai-workspace-setup.sh","setup-windows.ps1",
-        "start-windows.cmd","scripts/audit_sources.py","scripts/build_release.py",
-        "tests/test_installer.py","tests/test_cli.sh"])
-    for dirname in ("assets/scaffold","docs",".github"):
-        names.update(p.relative_to(ROOT).as_posix() for p in (ROOT/dirname).rglob("*") if p.is_file())
+    """Resolve the explicit release-manifest.json policy, including all maintained tests."""
+    manifest = json.loads((ROOT / "release-manifest.json").read_text(encoding="utf-8"))
+    if manifest.get("schema_version") != 1:
+        raise RuntimeError("Unsupported release source manifest schema")
+    names = set(manifest["files"])
+    ignored_directories = set(manifest.get("exclude_directories", []))
+    ignored_filenames = set(manifest.get("exclude_files", []))
+    ignored_suffixes = set(manifest.get("exclude_suffixes", []))
+    for dirname in manifest["trees"]:
+        base = ROOT / dirname
+        if not base.is_dir() or base.is_symlink():
+            raise RuntimeError("Missing or unsafe source tree: " + dirname)
+        for path in base.rglob("*"):
+            relative = path.relative_to(ROOT)
+            if any(part in ignored_directories for part in relative.parts):
+                continue
+            if path.name in ignored_filenames or path.suffix in ignored_suffixes:
+                continue
+            if path.is_symlink():
+                raise RuntimeError("Unsafe symlink in release source tree: " + relative.as_posix())
+            if path.is_file():
+                names.add(relative.as_posix())
+    required = set(CORE + ["LICENSE", "release-manifest.json", "tests/test_cli.sh"])
+    if not required <= names:
+        raise RuntimeError("Release manifest omits required files: %r" % sorted(required - names))
     for name in names:
-        if not (ROOT/name).is_file() or (ROOT/name).is_symlink():
-            raise RuntimeError("Missing or unsafe file: "+name)
+        parsed = PurePosixPath(name)
+        if parsed.is_absolute() or ".." in parsed.parts or not parsed.parts or "\\" in name:
+            raise RuntimeError("Unsafe release source path: " + name)
+        if not (ROOT / name).is_file() or (ROOT / name).is_symlink():
+            raise RuntimeError("Missing or unsafe file: " + name)
     return sorted(names)
+
 
 def archive_zip(paths):
     memory=io.BytesIO()
