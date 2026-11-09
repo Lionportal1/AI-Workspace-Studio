@@ -295,6 +295,31 @@ def import_community(workspace, sources, strict=False, log=print):
     return copied
 
 
+
+def record_skipped_sources(workspace, sources, reason, log=print):
+    """Record explicitly requested but disabled sources, without fetching anything."""
+    workspace = Path(workspace)
+    old = read_manifest(workspace)
+    previous = {s.get("vendor"): s for s in old["sources"]
+                if isinstance(s, dict) and isinstance(s.get("vendor"), str)}
+    current = []
+    for vendor, url, subdir in sources:
+        result = _source_result(vendor, url, subdir)
+        earlier = previous.get(vendor, {})
+        result["status"] = "skipped"
+        result["reason"] = reason
+        result["commit"] = earlier.get("commit")
+        result["skills"] = [dict(skill, status="previously_recorded")
+                            for skill in earlier.get("skills", []) if isinstance(skill, dict)]
+        result["counts"] = _counts(result["skills"])
+        current.append(result)
+        log("Community %s: skipped; %s" % (vendor, reason))
+    chosen = {s["vendor"] for s in current}
+    retained = [s for s in old["sources"] if isinstance(s, dict)
+                and s.get("vendor") not in chosen]
+    _write_manifest(workspace, {"schema_version": SCHEMA_VERSION, "sources": retained + current})
+
+
 def community_report(workspace, out=print):
     """Display local evidence without modifying the workspace or using the network."""
     workspace = Path(workspace)
