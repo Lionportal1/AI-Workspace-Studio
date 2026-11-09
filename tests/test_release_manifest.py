@@ -61,6 +61,15 @@ class ReleaseManifestTests(unittest.TestCase):
             self.assertNotIn("tests/__pycache__/test_cached.pyc", paths)
             self.assertNotIn("tests/test_ignored.pyc", paths)
 
+            # A manifest that omits a mandatory runtime/license file must fail,
+            # even if that file happens to exist on disk.
+            manifest["files"].remove("LICENSE")
+            (root / "release-manifest.json").write_text(
+                json.dumps(manifest), encoding="utf-8")
+            with patch.object(build_release, "ROOT", root):
+                with self.assertRaisesRegex(RuntimeError, "omits required files"):
+                    build_release.source_paths()
+
     def test_standalone_embeds_only_runtime_files(self):
         windows, _ = build_release.standalones()
         encoded = windows.decode("utf-8").split("$Payload=@'\n", 1)[1].split("\n'@\n", 1)[0]
