@@ -195,69 +195,10 @@ def copy_scaffold(workspace, preset, force):
 def clone_and_import(workspace, community, strict):
     if community == "none":
         return 0
-    exe = shutil.which("git")
-    if not exe:
-        if strict:
-            fail("Git is required to download community skills")
-        log("WARNING: Git not found; skipped optional community sources")
-        return 0
+    from lib.community_imports import import_community
     selected = REMOTE_SOURCES[:5 if community == "curated" else 7]
-    provenance = workspace / ".agents" / "skill-sources.lock.json"
-    safe_target(workspace, provenance)
-    existing = load_object(provenance).get("sources", [])
-    if not isinstance(existing, list):
-        fail("Invalid existing skill source lockfile")
-    total = 0
-    with tempfile.TemporaryDirectory(prefix="ai-studio-community-") as temp:
-        for vendor, url, subdir in selected:
-            dest = Path(temp) / vendor
-            log("Fetching community skills: " + vendor)
-            proc = subprocess.run([exe, "clone", "--quiet", "--depth", "1", "--", url, str(dest)],
-                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-            if proc.returncode:
-                message = "Unable to fetch %s: %s" % (vendor, proc.stderr.strip()[:300])
-                if strict:
-                    fail(message)
-                log("WARNING: " + message)
-                continue
-            sha_run = subprocess.run([exe, "-C", str(dest), "rev-parse", "HEAD"], capture_output=True, text=True)
-            sha = sha_run.stdout.strip() if sha_run.returncode == 0 else "unknown"
-            copied = []
-            # Only accept declarative skill bundles; never execute post-install
-            # scripts, package managers, or files provided by a cloned repo.
-            source = dest / subdir
-            if source.is_symlink():
-                log("WARNING: Refusing symlinked source directory for " + vendor)
-                continue
-            if not source.exists():
-                log("WARNING: No skills directory in " + vendor)
-                continue
-            for skill_file in sorted(source.rglob("SKILL.md")):
-                folder = skill_file.parent
-                name = folder.name
-                if not re.fullmatch(r"[a-zA-Z0-9_-]+", name):
-                    continue
-                skill_dest = workspace / ".agents" / "skills" / name
-                if skill_dest.exists() or skill_dest.is_symlink():
-                    continue
-                if any(part.is_symlink() for part in folder.rglob("*")):
-                    continue
-                if any(part.is_symlink() for part in folder.parents if part != source and part != dest):
-                    continue
-                if any(p.is_symlink() for p in (workspace / ".agents", workspace / ".agents" / "skills")):
-                    fail("Refusing symlinked skills directory")
-                skill_dest.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copytree(folder, skill_dest, symlinks=False)
-                copied.append(name)
-            if copied:
-                total += len(copied)
-                existing.append({"vendor": vendor, "url": url, "commit": sha,
-                                 "new_skills_copied": copied})
-    if total:
-        put_text(workspace, ".agents/skill-sources.lock.json",
-                 json.dumps({"schema_version": 1, "sources": existing}, indent=2), force=True)
-    log("Community skills imported: %d" % total)
-    return total
+    return import_community(workspace, selected, strict=strict, log=log)
+
 
 
 def install_plugins(mode, strict):
@@ -508,6 +449,8 @@ def build_parser():
     parser.add_argument("--menu", action="store_true")
     parser.add_argument("--doctor", action="store_true")
     parser.add_argument("--list-profiles", action="store_true")
+    parser.add_argument("--community-report", action="store_true",
+                        help="Display recorded community skill sources and local file locations (offline; read-only)")
     parser.add_argument("--version", action="version", version=VERSION)
     return parser
 
@@ -524,6 +467,10 @@ def run():
         for name in AGENTS:
             print("  " + name)
         print("  universal (all eight)")
+        return
+    if config.community_report:
+        from lib.community_imports import community_report
+        community_report(Path(config.project).expanduser().absolute())
         return
     if config.profile:
         if config.profile in ("minimal", "balanced", "max"):
@@ -573,6 +520,9 @@ def run():
         destination = workspace / item
         safe_target(workspace, destination)
         load_object(destination)
+    if config.community != "none":
+        from lib.community_imports import read_manifest
+        read_manifest(workspace)
     log("Creating workspace: %s (agents=%s, skills=%s)" % (workspace, config.agent, config.preset))
     workspace.mkdir(parents=True, exist_ok=True)
     skills, copied = copy_scaffold(workspace, config.preset, config.force)
