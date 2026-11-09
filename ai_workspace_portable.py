@@ -484,6 +484,7 @@ def run():
     config.agent = parse_targets(config.agent)
     if config.mcp == "auto":
         config.mcp = {"minimal": "none", "balanced": "core", "max": "full"}[config.preset]
+    requested_community = config.community
     if config.offline:
         if config.community != "none" or config.native_plugins != "none":
             log("Offline mode: remote skill imports and global plugin installs disabled")
@@ -520,7 +521,7 @@ def run():
         destination = workspace / item
         safe_target(workspace, destination)
         load_object(destination)
-    if config.community != "none":
+    if config.community != "none" or (config.offline and requested_community != "none"):
         from lib.community_imports import read_manifest
         read_manifest(workspace)
     log("Creating workspace: %s (agents=%s, skills=%s)" % (workspace, config.agent, config.preset))
@@ -530,6 +531,10 @@ def run():
     total, added = merge_json(workspace, ".agents/mcp_config.json", "mcpServers", mcp_servers)
     log("Built-in skills: %d, new scaffold files: %d, MCP entries: %d (new: %d)" %
         (skills, copied, total, added))
+    if config.offline and requested_community != "none":
+        from lib.community_imports import record_skipped_sources
+        selected = REMOTE_SOURCES[:5 if requested_community == "curated" else 7]
+        record_skipped_sources(workspace, selected, "Disabled by --offline", log=log)
     clone_and_import(workspace, config.community, config.strict)
     subprocess.run([sys.executable, str(ADAPTER), str(workspace), config.agent, config.preset,
                     config.mcp, "1" if config.force else "0", config.stack, VERSION], check=True)
